@@ -1,24 +1,17 @@
-# Validation-driven bin size vs fixed bin size 16 against a decoy attacker (Adult stand-in)
+# Adaptive decoy bin sizing (stand-in experiment on OpenML Adult, ID 1590)
 
-Motivation: "Toxic Decoys: A Path to Scaling Privacy-Preserving Cryptocurrencies" (2025) studies how decoys and anonymity-set (bin) size trade storage cost against how well an observer can single out the real record. Choosing that bin size is a design decision, and a fixed default may waste storage or leave records exposed. This repository tests a simple alternative, choosing the bin size from validation data, on a public tabular dataset. It is a stand-in experiment, not a re-implementation of the paper's ledger.
+Compares a validation-driven bin-size rule against a fixed bin size of 16 under the same LightGBM decoy attacker. Records are split 60/20/20 (train/validation/test) with a fixed seed (42); the attacker is trained on the train split, bin size is selected on validation top-1 identification rate, and the test split is used once per seed (42, 43, 44).
 
-Question: Can a validation-driven rule for choosing the bin size give a lower attacker identification rate at lower storage cost than a fixed bin size of 16 under the same attacker?
-
-Dataset: OpenML Adult census data (ID 1590, https://www.openml.org/d/1590), downloaded at run time. This is not the paper's own dataset. Records are split 60/20/20 into train, validation and test, with categorical features one-hot encoded.
-
-Baseline vs improved:
-- Baseline: fixed bin size of 16, a common default not taken from the paper.
-- Improved: the smallest bin size in {2, 4, 8, 16, 32, 64} whose validation top-1 identification rate is at most 0.10.
-- Both use the same LightGBM attacker (real records vs random population decoys), the same data and the same evaluation function.
-
-## How to run
+Run:
 
 ```
 pip install -r requirements.txt
 python analysis.py
 ```
 
-Results: results are written to `results.json` (charts go to `figures/`).
+Outputs: `results.json`, `figures/test_identification_rate.png`, `figures/validation_curve.png`.
+
+Latest fix: categorical-column detection now uses `pd.api.types.is_numeric_dtype` rather than `dtype == object`, because pandas 3.x loads string columns with a `str` dtype. The method, data, baseline, and split are unchanged.
 
 ## Reference
 

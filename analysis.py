@@ -43,6 +43,15 @@ def get(url):
             time.sleep(2 ** attempt)
 
 
+def _decode(v):
+    """Nominal value -> str; bytes decoded; missing -> '?' category."""
+    if isinstance(v, bytes):
+        return v.decode()
+    if v is None or (not isinstance(v, str) and pd.isna(v)):
+        return "?"
+    return str(v)
+
+
 def load():
     """Fetch the Adult ARFF file named by the OpenML API and return (DataFrame, target column)."""
     desc = get(API).json()["data_set_description"]
@@ -52,9 +61,9 @@ def load():
         f.write(get(desc["url"]).text)
     raw, _ = arff.loadarff(path)
     df = pd.DataFrame(raw)
-    for c in df.columns:  # decode nominal byte strings; missing values become a '?' category
-        if df[c].dtype == object:
-            df[c] = df[c].map(lambda v: v.decode() if isinstance(v, bytes) else ("?" if pd.isna(v) else str(v)))
+    for c in df.columns:  # decode nominal columns (any string-like dtype, incl. pandas 3 'str')
+        if not pd.api.types.is_numeric_dtype(df[c]):
+            df[c] = pd.Series([_decode(v) for v in df[c].tolist()], index=df.index, dtype=object)
     if len(df) > MAX_ROWS:
         df = df.sample(MAX_ROWS, random_state=SEED)
     return df.reset_index(drop=True), desc["default_target_attribute"]
@@ -65,8 +74,8 @@ def build_matrix(df):
     M = np.zeros((len(df), df.shape[1]))
     spec = []
     for j, c in enumerate(df.columns):
-        if df[c].dtype == object:
-            cat = pd.Categorical(df[c])
+        if not pd.api.types.is_numeric_dtype(df[c]):
+            cat = pd.Categorical(df[c].astype(object))
             M[:, j] = cat.codes
             spec.append((j, len(cat.categories)))
         else:
@@ -199,7 +208,8 @@ def main():
                  "education-num). Bin-size selection uses a held-out validation split (not k-fold CV) because the "
                  "rule is defined on validation top-1; the test set is used once per seed. Attacker hyper-parameters "
                  "are fixed, not tuned. Std is population std over seeds 42-44 (attacker and bin randomness; one "
-                 "data split). Storage overhead is the bin size.",
+                 "data split). Storage overhead is the bin size. Fix: nominal-column detection now uses "
+                 "is_numeric_dtype instead of dtype==object, so it works with pandas 3 string dtypes.",
     }
     with open("results.json", "w", encoding="utf-8") as f:
         json.dump(results, f, indent=2)
