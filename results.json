@@ -1,0 +1,31 @@
+{
+  "question": "Can a validation-driven rule for choosing the bin size give a lower attacker identification rate at lower storage cost than a fixed bin size of 16 under the same attacker?",
+  "method": "Stand-in experiment on OpenML Adult (ID 1590). Records split 60/20/20 (train/validation/test), one-hot encoded. A LightGBM attacker learns real records vs random population decoys and, for each bin (real record + decoys), picks the top-scoring member. Same attacker in all conditions.",
+  "dataset": {
+    "name": "Adult (OpenML 1590)",
+    "source_url": "https://www.openml.org/d/1590",
+    "n_rows": 48842,
+    "n_train": 29304,
+    "n_test": 9769,
+    "same_as_paper": false,
+    "baseline_is_papers_method": false
+  },
+  "metric_name": "test top-1 attacker identification rate",
+  "higher_is_better": false,
+  "baseline": "Fixed bin size 16 (common default, not from the paper) with the same LightGBM attacker.",
+  "improved": "Bin size chosen as the smallest in [2, 4, 8, 16, 32, 64] whose validation top-1 rate is <= 0.1; falls back to the largest size if none qualifies.",
+  "metrics": {
+    "baseline_score": 0.8893370184597537,
+    "improved_score": 0.7055140410140922,
+    "improvement": 0.18382297744566145,
+    "baseline_score_std": 0.0023976689907687886,
+    "improved_score_std": 0.0044765251025863035,
+    "baseline_bin_size": 16.0,
+    "improved_bin_size": 64.0,
+    "baseline_share_meeting_target": 0.004981744975603098,
+    "improved_share_meeting_target": 0.08936431569249668,
+    "seeds_target_unmet": 3.0,
+    "chance_rate_fixed_bin": 0.0625
+  },
+  "notes": "Stand-in for the paper's ledger, not a re-implementation. Decoys are drawn attribute-by-attribute from population marginals, so the attacker exploits broken correlations (e.g. education vs education-num). Bin-size selection uses a held-out validation split (not k-fold CV) because the rule is defined on validation top-1; the test set is used once per seed. Attacker hyper-parameters are fixed, not tuned. Std is population std over seeds 42-44 (attacker and bin randomness; one data split). Storage overhead is the bin size. Fix: nominal-column detection now uses is_numeric_dtype instead of dtype==object, so it works with pandas 3 string dtypes."
+}
